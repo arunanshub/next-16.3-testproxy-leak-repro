@@ -21,6 +21,42 @@ export default async function Probe() {
     viaForEach: (manual.get("cookie") ?? "").length,
   };
 
+  // TEMPORARY probe: `new Headers(x)` does not use `.get()` or `.forEach()`. It
+  // copies via the iterator protocol (Symbol.iterator / entries), or, if there
+  // is no iterator, via own enumerable properties. These counts show which
+  // access path is empty and which still works.
+  const count = (fn: () => unknown[]): number | string => {
+    try {
+      return fn().length;
+    } catch (e) {
+      return `ERR:${(e as Error).message}`;
+    }
+  };
+  const anyH = h as unknown as {
+    [Symbol.iterator]?: unknown;
+    constructor?: { name?: string };
+  };
+  let forEachCount = 0;
+  h.forEach(() => {
+    forEachCount += 1;
+  });
+  const why = {
+    ctor: anyH.constructor?.name ?? typeof h,
+    hasSymbolIterator: typeof anyH[Symbol.iterator] === "function",
+    spread: count(() => [...(h as unknown as Iterable<[string, string]>)]),
+    entries: count(() => [...h.entries()]),
+    keys: count(() => [...h.keys()]),
+    forEach: forEachCount,
+    ownKeys: Object.keys(h as object).length,
+  };
+  // eslint-disable-next-line no-console
+  console.error(`[WHY] ${JSON.stringify(why)}`);
+  try {
+    appendFileSync("/tmp/repro.log", `[WHY] ${JSON.stringify(why)}\n`);
+  } catch {
+    // Ignore a write error.
+  }
+
   const line = `[REPRO] ${JSON.stringify(result)}`;
   // eslint-disable-next-line no-console
   console.error(line);

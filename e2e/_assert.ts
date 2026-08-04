@@ -6,10 +6,11 @@ import { readFileSync } from "node:fs";
 // fails on a version with the bug.
 export function assertCookiePreserved(logPath = "/tmp/repro.log"): void {
   const raw = readFileSync(logPath, "utf8").trim();
+  const prefix = "[REPRO] ";
   const passes = raw
     .split("\n")
-    .filter(Boolean)
-    .map((line) => JSON.parse(line.replace("[REPRO] ", "")) as {
+    .filter((line) => line.startsWith(prefix))
+    .map((line) => JSON.parse(line.slice(prefix.length)) as {
       direct: number;
       viaConstructor: number;
       viaForEach: number;
