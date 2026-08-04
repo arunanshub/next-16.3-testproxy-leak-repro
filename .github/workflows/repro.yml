@@ -1,8 +1,8 @@
-name: leak-repro
+name: repro
 on: [push, workflow_dispatch]
 
 jobs:
-  leak:
+  repro:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     strategy:
@@ -10,6 +10,8 @@ jobs:
       matrix:
         next: ["16.3.0-preview.9", "16.3.0-preview.10", "16.3.0"]
     name: "next ${{ matrix.next }}"
+    env:
+      NEXTV: ${{ matrix.next }}
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -18,6 +20,20 @@ jobs:
           node-version: "22.x"
       - run: pnpm install --no-frozen-lockfile
       - run: pnpm add next@${{ matrix.next }}
-      - run: pnpm exec playwright install --with-deps chromium
-      # Watch the [rss] lines: flat on preview.9, unbounded on preview.10 / 16.3.0.
-      - run: pnpm test:leak
+
+      - name: Result table header
+        run: |
+          {
+            echo "### next ${{ matrix.next }}"
+            echo ""
+            echo "Cookie length as read three ways (a value of 0 means the cookie was lost):"
+            echo ""
+            echo "| next | mode | direct .get() | new Headers() | forEach | bug |"
+            echo "|---|---|---|---|---|---|"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Check (plain, no testProxy)
+        run: bash scripts/check.sh plain
+
+      - name: Check (testProxy on)
+        run: bash scripts/check.sh testproxy

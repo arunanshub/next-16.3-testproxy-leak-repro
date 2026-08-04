@@ -1,20 +1,20 @@
 {
-  "name": "next163-testproxy-leak-repro",
+  "name": "next163-headers-copy-repro",
   "private": true,
   "packageManager": "pnpm@9.15.0",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "test:leak": "bash scripts/run-leak.sh"
+    "check:plain": "bash scripts/check.sh plain",
+    "check:testproxy": "bash scripts/check.sh testproxy"
   },
   "dependencies": {
-    "next": "16.3.0-preview.10",
+    "next": "16.3.0",
     "react": "19.2.8",
     "react-dom": "19.2.8"
   },
   "devDependencies": {
-    "@playwright/test": "^1.61.1",
     "@types/node": "^22.0.0",
     "@types/react": "19.2.18",
     "typescript": "^5.9.0"

@@ -1,22 +1,32 @@
-// Dynamic Server Component that performs an internal, uncached, *streamed*
-// server-side fetch on every request. Under cacheComponents + testProxy this
-// fetch's response memory is never released on the broken versions.
-//
-// `instant = false` marks the segment as allowed to block, so the uncached
-// fetch can run directly in the render body (mirrors the real app's page).
-export const instant = false;
+import { Suspense } from "react";
+import { headers } from "next/headers";
 
-export default async function Page() {
-  // Fetch a real external host over the network (streamed response), like the
-  // real app hitting its control-tower backend through the test proxy loopback.
-  const res = await fetch("https://httpbin.org/stream/500", {
-    cache: "no-store",
-  });
-  const text = await res.text();
+// The same check as /api/headers-check, but in a Server Component render.
+// This is the context where the real app first saw the bug (a page that reads
+// the session). The dynamic read sits inside <Suspense> so it is valid under
+// cacheComponents.
+async function HeaderCheck() {
+  const h = await headers();
 
+  const manual = new Headers();
+  h.forEach((value, key) => manual.set(key, value));
+
+  const result = {
+    direct: (h.get("cookie") ?? "").length,
+    viaConstructor: (new Headers(h).get("cookie") ?? "").length,
+    viaForEach: (manual.get("cookie") ?? "").length,
+  };
+
+  return <pre data-testid="result">{JSON.stringify(result, null, 2)}</pre>;
+}
+
+export default function Page() {
   return (
     <main>
-      <h1 data-testid="loaded">loaded {text.length} bytes</h1>
+      <h1>new Headers(await headers()) copy check</h1>
+      <Suspense fallback={<p>loading</p>}>
+        <HeaderCheck />
+      </Suspense>
     </main>
   );
 }

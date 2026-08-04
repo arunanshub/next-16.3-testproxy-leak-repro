@@ -1,46 +1,57 @@
-# Minimal repro: unbounded memory with `cacheComponents` + `testProxy`
+# Minimal repro: `new Headers(await headers())` loses all entries in Next 16.3
 
-A Server Component does an internal, uncached, **streamed** `fetch()`. With
-`cacheComponents: true` and `experimental.testProxy: true`, driving it under
-Playwright test-mode (`fetchLoopback: true`) leaks the dev server's memory
-without bound on `next@16.3.0-preview.10` and `16.3.0`, but not on
-`16.3.0-preview.9`.
+In Next 16.3, `await headers()` returns a `ReadonlyHeaders`. You can read it
+with `.get()`. But `new Headers(x)` copies it to an **empty** `Headers`. Every
+entry is lost, including `Cookie`.
 
-> ⚠️ **Runs the host out of memory on the broken versions.** Use CI (the
-> included workflow) or a machine with lots of RAM. `scripts/run-leak.sh` caps
-> the heap at 4 GB so the worker OOMs instead of freezing the host — but the WSL
-> host still froze for us before the cap, so prefer CI.
+This is the exact pattern that server auth libraries use to read request
+cookies. For example, better-auth does `new Headers(passedHeaders)` inside
+`api.getSession` before it parses the `Cookie` header. The copy is empty, so it
+finds no cookie and the session read returns null — even when the request has a
+valid session cookie.
 
-## Run
+## What the repro does
+
+`app/api/headers-check/route.ts` reads the request `Cookie` three ways and
+returns the length of each:
+
+- `direct` — `headers().get("cookie")` (works)
+- `viaConstructor` — `new Headers(headers()).get("cookie")` (the bug)
+- `viaForEach` — a manual `forEach` copy (the workaround)
+
+`app/page.tsx` does the same in a Server Component render.
+
+## Run it
 
 ```bash
 pnpm install
-pnpm exec playwright install chromium
-
-# GREEN baseline — RSS stays flat:
-pnpm add next@16.3.0-preview.9
-pnpm test:leak
-
-# REGRESSION — RSS climbs without bound (watch the [rss] lines):
-pnpm add next@16.3.0-preview.10
-pnpm test:leak
+pnpm check:plain        # no testProxy
+pnpm check:testproxy    # testProxy on
 ```
 
-Or push to GitHub and let `.github/workflows/repro.yml` run all three versions.
+Each command starts the app, sends one request with a `Cookie` header, and
+prints the three lengths. A `viaConstructor` of `0` while `direct` is non-zero
+means the copy lost the cookie.
 
-## What to look for
+## Expected vs actual
 
-`pnpm test:leak` prints the `next-server` worker RSS every 5s:
+- Expected: `new Headers(await headers())` copies all entries (WHATWG behavior).
+- Actual (16.3): the copy is empty.
 
-- `16.3.0-preview.9`: flat (~a few hundred MB), test passes fast.
-- `16.3.0-preview.10` / `16.3.0`: RSS grows ~linearly and never drops;
-  navigations slow down and the run stalls / OOMs.
+## Versions
 
-## Files
+The CI (`.github/workflows/repro.yml`) runs the check across
+`16.3.0-preview.9`, `16.3.0-preview.10`, and `16.3.0`, in both plain and
+testProxy modes. The job summary shows one table per version. This shows the
+regression window and whether `testProxy` matters.
 
-- `next.config.ts` — `cacheComponents`, `partialPrefetching`, `testProxy` (E2E-gated)
-- `app/page.tsx` — Server Component doing the internal streamed `fetch()`
-- `app/api/stream/route.ts` — the streamed route it fetches
-- `e2e/leak.spec.ts` — test-mode test, `fetchLoopback: true`, navigates in a loop
-- `playwright.config.ts` — starts `next dev` with `NEXT_PUBLIC_E2E_MODE=true`
-- `scripts/run-leak.sh` — runs the test and samples worker RSS
+## Workaround
+
+Copy the headers by hand before you pass them to a library:
+
+```ts
+const src = await headers();
+const safe = new Headers();
+src.forEach((value, key) => safe.set(key, value));
+// pass `safe` instead of `src`
+```
