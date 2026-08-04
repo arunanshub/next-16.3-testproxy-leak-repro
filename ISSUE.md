@@ -1,47 +1,60 @@
-# `new Headers(await headers())` returns an empty Headers in 16.3
+# `new Headers(await headers())` returns an empty Headers under testmode in 16.3
 
 ## What happens
 
-In Next 16.3, `await headers()` returns a `ReadonlyHeaders`. `.get()` and
-`.forEach()` on it work. But `new Headers(x)` copies it to an **empty**
-`Headers`. All entries are lost, including `Cookie`.
+Under the Next testmode harness (`experimental.testProxy` /
+`next/experimental/testmode/playwright`), `await headers()` returns a
+`ReadonlyHeaders` that breaks when copied. `.get()` and `.forEach()` on it work.
+But `new Headers(x)` returns an **empty** `Headers`. Every entry is lost,
+including `Cookie`.
+
+Without testmode, the copy works. So this hits code paths that run under a
+testmode E2E suite.
 
 ## Why it matters
 
 Server auth libraries copy the request headers this way. better-auth does
-`new Headers(passedHeaders)` before it reads the `Cookie` header
-(`better-auth/dist/api/dispatch.mjs`). The copy is empty, so it finds no cookie,
-and `api.getSession` returns null. The user looks logged out, even with a valid
-session cookie on the request.
+`new Headers(passedHeaders)` before it reads the `Cookie` header. Under testmode
+the copy is empty, so `api.getSession` returns null, and an authenticated E2E
+user is treated as logged out. This broke a whole E2E suite on the 16.3 upgrade.
 
 ## Reproduce
 
-Clone this repo, then:
+This repo. `/probe` reads the request cookie three ways and prints `[REPRO]`.
 
 ```bash
 pnpm install
-pnpm check:plain
+pnpm exec playwright install --with-deps chromium
+pnpm e2e:testmode   # bug: viaConstructor = 0
+pnpm e2e:plain      # no bug: viaConstructor = full length
 ```
 
-Or the minimal case, in a Server Component or a Route Handler, with a request
-that has a `Cookie` header:
+Cookie length by mode and version:
+
+| next | mode | direct | new Headers() | forEach |
+|---|---|---|---|---|
+| 16.3.0 | testmode | 414 | **0** | 414 |
+| 16.3.0 | plain | 414 | 414 | 414 |
+| 16.3.0-preview.9 | testmode | 414 | 414 | 414 |
+
+Minimal read, in a page or route that runs under testmode, with a `Cookie` on
+the request:
 
 ```ts
 import { headers } from "next/headers";
 
 const h = await headers();
-h.get("cookie")?.length;               // e.g. 5285  (present)
-new Headers(h).get("cookie")?.length;  //      0     (lost)
+h.get("cookie")?.length;               // 414
+new Headers(h).get("cookie")?.length;  //   0  <- lost
 ```
 
 ## Expected
 
-`new Headers(await headers())` copies all entries. This is the WHATWG `Headers`
-constructor behavior.
+`new Headers(await headers())` copies all entries. This is the WHATWG behavior.
 
 ## Actual
 
-The copy is empty. Every header is lost.
+The copy is empty under testmode.
 
 ## Versions
 
@@ -49,7 +62,9 @@ The copy is empty. Every header is lost.
 - Good: `16.3.0-preview.9`.
 - react / react-dom `19.2.8`.
 
-See the CI in this repo for the full version x mode table.
+The regression window is `preview.9` -> `preview.10`. This is likely related to
+the vendored testmode interceptor change in that window (#96059), and to the
+open testmode report #96521.
 
 ## Workaround
 
