@@ -7,7 +7,9 @@
     "build": "next build",
     "start": "next start",
     "check:plain": "bash scripts/check.sh plain",
-    "check:testproxy": "bash scripts/check.sh testproxy"
+    "check:testproxy": "bash scripts/check.sh testproxy",
+    "e2e:plain": "playwright test --config playwright.plain.config.ts",
+    "e2e:testmode": "playwright test --config playwright.testmode.config.ts"
   },
   "dependencies": {
     "next": "16.3.0",
@@ -15,6 +17,7 @@
     "react-dom": "19.2.8"
   },
   "devDependencies": {
+    "@playwright/test": "^1.61.1",
     "@types/node": "^22.0.0",
     "@types/react": "19.2.18",
     "typescript": "^5.9.0"

@@ -25,13 +25,22 @@ returns the length of each:
 
 ```bash
 pnpm install
-pnpm check:plain        # no testProxy
-pnpm check:testproxy    # testProxy on
+pnpm exec playwright install --with-deps chromium
+
+pnpm check:plain     # baseline: a plain curl request (runtime pass only)
+pnpm e2e:plain       # browser navigation, no testmode harness
+pnpm e2e:testmode    # browser navigation, testmode harness (like the real app)
 ```
 
-Each command starts the app, sends one request with a `Cookie` header, and
-prints the three lengths. A `viaConstructor` of `0` while `direct` is non-zero
-means the copy lost the cookie.
+The curl baseline hits only the runtime render. The browser tests load `/`
+(which prefetches `/probe`) and then click through to `/probe`. `/probe` reads
+the cookie three ways and prints `[REPRO]` server-side for **every** render pass
+(prefetch prerender and runtime). A `viaConstructor` of `0` while `direct` is
+non-zero means the copy lost the cookie.
+
+The `plain` vs `testmode` split shows whether the testmode harness is required,
+or whether the `partialPrefetching` prerender pass alone triggers it (which
+production also runs).
 
 ## Expected vs actual
 

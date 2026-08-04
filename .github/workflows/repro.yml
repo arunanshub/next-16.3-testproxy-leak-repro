@@ -4,7 +4,7 @@ on: [push, workflow_dispatch]
 jobs:
   repro:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix:
@@ -20,20 +20,22 @@ jobs:
           node-version: "22.x"
       - run: pnpm install --no-frozen-lockfile
       - run: pnpm add next@${{ matrix.next }}
+      - run: pnpm exec playwright install --with-deps chromium
 
-      - name: Result table header
-        run: |
-          {
-            echo "### next ${{ matrix.next }}"
-            echo ""
-            echo "Cookie length as read three ways (a value of 0 means the cookie was lost):"
-            echo ""
-            echo "| next | mode | direct .get() | new Headers() | forEach | bug |"
-            echo "|---|---|---|---|---|---|"
-          } >> "$GITHUB_STEP_SUMMARY"
-
-      - name: Check (plain, no testProxy)
+      # Baseline: a plain curl request, no browser, no testmode. Prints the
+      # cookie length read three ways. Expected: all equal (no bug at runtime).
+      - name: Baseline curl (plain)
+        continue-on-error: true
         run: bash scripts/check.sh plain
 
-      - name: Check (testProxy on)
-        run: bash scripts/check.sh testproxy
+      # Browser navigation WITHOUT the testmode harness. The server prints
+      # [REPRO] lines for every render pass of /probe (prefetch prerender +
+      # runtime). A viaConstructor of 0 while direct is non-zero is the bug.
+      - name: Browser nav (plain, no testmode)
+        continue-on-error: true
+        run: pnpm e2e:plain
+
+      # Browser navigation WITH the testmode harness, like the real app.
+      - name: Browser nav (testmode)
+        continue-on-error: true
+        run: pnpm e2e:testmode
