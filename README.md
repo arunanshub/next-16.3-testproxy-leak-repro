@@ -14,20 +14,29 @@ cookies. better-auth does `new Headers(passedHeaders)` inside `api.getSession`
 before it parses `Cookie`. Under testmode the copy is empty, so it finds no
 cookie and the session read returns null.
 
-## Result
+## The CI is RED where the bug is — on purpose
 
-The CI (`.github/workflows/repro.yml`) navigates a browser to `/probe`, which
-reads the cookie three ways and records `[REPRO]` for every render pass. It runs
-plain and testmode, across three versions:
+Each test **asserts the correct behavior**: `new Headers(headers())` must keep
+the cookie. So a cell goes **red exactly where the bug is**. The red is the
+repro. Three cells isolate the trigger:
 
-| next | mode | direct | new Headers() | forEach |
-|---|---|---|---|---|
-| 16.3.0 | testmode | 414 | **0** | 414 |
-| 16.3.0 | plain | 414 | 414 | 414 |
-| 16.3.0-preview.10 | testmode | 414 | **0** | 414 |
-| 16.3.0-preview.9 | testmode | 414 | 414 | 414 |
+| cell | testProxy config | test runtime | this is… |
+|---|---|---|---|
+| `plain` | off | plain Playwright | the production shape |
+| `proxyconfig` | on | plain Playwright | config on, runtime off |
+| `testmode` | on | testmode | the real app's E2E shape |
 
-So the bug is **testmode-only**, and regressed **`preview.9` -> `preview.10`**.
+Confirmed so far (cookie length; `new Headers()` of `0` = lost):
+
+| next | plain | testmode |
+|---|---|---|
+| 16.3.0 | 414 (green) | **0 (red)** |
+| 16.3.0-preview.10 | 414 (green) | **0 (red)** |
+| 16.3.0-preview.9 | 414 (green) | 414 (green) |
+
+So the bug is **testmode-only** and regressed **`preview.9` -> `preview.10`**.
+The `proxyconfig` cell shows whether the testProxy config alone is enough, or
+the testmode runtime is required — see the CI result.
 
 ## Run it
 
@@ -35,13 +44,14 @@ So the bug is **testmode-only**, and regressed **`preview.9` -> `preview.10`**.
 pnpm install
 pnpm exec playwright install --with-deps chromium
 
-pnpm e2e:plain      # browser navigation, no testmode harness
-pnpm e2e:testmode   # browser navigation, testmode harness (like the real app)
+pnpm e2e:plain         # production shape — expected green
+pnpm e2e:proxyconfig   # testProxy config, plain runtime
+pnpm e2e:testmode      # real app shape — expected red on 16.3
 ```
 
-`/probe` reads the cookie three ways and prints `[REPRO]` (also to
-`/tmp/repro.log`). A `new Headers()` value of `0` while `direct` is non-zero
-means the copy lost the cookie.
+`/probe` reads the cookie three ways and writes `[REPRO]` to `/tmp/repro.log`
+for every render pass. The test reads that file and fails if any pass that saw
+the cookie lost it in the `new Headers()` copy.
 
 ## Expected vs actual
 

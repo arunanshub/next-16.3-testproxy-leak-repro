@@ -1,6 +1,9 @@
 name: repro
 on: [push, workflow_dispatch]
 
+# TDD-style: each cell ASSERTS the correct behavior (the copy must keep the
+# cookie), so a cell goes RED exactly where the bug is. Expect green on
+# preview.9 everywhere, and red on preview.10 / 16.3.0 in the testmode cell.
 jobs:
   repro:
     runs-on: ubuntu-latest
@@ -22,27 +25,38 @@ jobs:
       - run: pnpm add next@${{ matrix.next }}
       - run: pnpm exec playwright install --with-deps chromium
 
-      # Browser navigation WITHOUT the testmode harness. /probe writes a [REPRO]
-      # line for every render pass (prefetch prerender + runtime). A
-      # viaConstructor of 0 while direct is non-zero is the bug. If it appears
-      # here, the trigger is the render model (prod runs it too), not testmode.
-      - name: Browser nav (plain, no testmode)
-        continue-on-error: true
+      # No testProxy, no testmode runtime — the production shape. Expected GREEN.
+      - name: "plain (production shape)"
+        if: always()
         env:
           PORT: "3000"
         run: |
           rm -f /tmp/repro.log
-          pnpm e2e:plain || true
-          echo "===== [REPRO] plain (next ${{ matrix.next }}) ====="
-          cat /tmp/repro.log || echo "(no [REPRO] lines — /probe did not render)"
+          set +e; pnpm e2e:plain; rc=$?; set -e
+          echo "===== [REPRO] plain (${{ matrix.next }}) ====="
+          cat /tmp/repro.log 2>/dev/null || echo "(no [REPRO] lines)"
+          exit $rc
 
-      # Browser navigation WITH the testmode harness, like the real app.
-      - name: Browser nav (testmode)
-        continue-on-error: true
+      # testProxy config ON, but plain runtime. Isolates config from runtime.
+      - name: "testProxy config, plain runtime"
+        if: always()
+        env:
+          PORT: "3002"
+        run: |
+          rm -f /tmp/repro.log
+          set +e; pnpm e2e:proxyconfig; rc=$?; set -e
+          echo "===== [REPRO] proxyconfig (${{ matrix.next }}) ====="
+          cat /tmp/repro.log 2>/dev/null || echo "(no [REPRO] lines)"
+          exit $rc
+
+      # Full testmode harness, like the real app. Expected RED on preview.10+.
+      - name: "testmode (real app shape)"
+        if: always()
         env:
           PORT: "3001"
         run: |
           rm -f /tmp/repro.log
-          pnpm e2e:testmode || true
-          echo "===== [REPRO] testmode (next ${{ matrix.next }}) ====="
-          cat /tmp/repro.log || echo "(no [REPRO] lines — /probe did not render)"
+          set +e; pnpm e2e:testmode; rc=$?; set -e
+          echo "===== [REPRO] testmode (${{ matrix.next }}) ====="
+          cat /tmp/repro.log 2>/dev/null || echo "(no [REPRO] lines)"
+          exit $rc
