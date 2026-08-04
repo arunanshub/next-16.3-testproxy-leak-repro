@@ -7,8 +7,9 @@
 export const instant = false;
 
 export default async function Page() {
-  const port = process.env.PORT ?? "3000";
-  const res = await fetch(`http://localhost:${port}/api/stream`, {
+  // Fetch a *separate* backend origin (:4000), like the real app hitting its
+  // control-tower backend — not the Next server fetching itself.
+  const res = await fetch("http://localhost:4000/stream", {
     cache: "no-store",
   });
   const text = await res.text();
