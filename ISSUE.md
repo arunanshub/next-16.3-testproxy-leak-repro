@@ -12,7 +12,7 @@ Server auth libraries copy the request headers with `new Headers()`. better-auth
 
 ## Reproduce
 
-Repo: <add the repo URL here>.
+Repo: https://github.com/arunanshub/next-16.3-testmode-headers-copy
 
 ```bash
 pnpm install
