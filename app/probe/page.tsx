@@ -25,29 +25,23 @@ export default async function Probe() {
   // copies via the iterator protocol (Symbol.iterator / entries), or, if there
   // is no iterator, via own enumerable properties. These counts show which
   // access path is empty and which still works.
-  const count = (fn: () => unknown[]): number | string => {
+  const G = Headers;
+  const cookieLen = (x: Headers): number => (x.get("cookie") ?? "").length;
+  const tryLen = (fn: () => Headers): number | string => {
     try {
-      return fn().length;
+      return cookieLen(fn());
     } catch (e) {
       return `ERR:${(e as Error).message}`;
     }
   };
-  const anyH = h as unknown as {
-    [Symbol.iterator]?: unknown;
-    constructor?: { name?: string };
-  };
-  let forEachCount = 0;
-  h.forEach(() => {
-    forEachCount += 1;
-  });
+  const anyH = h as unknown as { constructor?: { name?: string } };
   const why = {
     ctor: anyH.constructor?.name ?? typeof h,
-    hasSymbolIterator: typeof anyH[Symbol.iterator] === "function",
-    spread: count(() => [...(h as unknown as Iterable<[string, string]>)]),
-    entries: count(() => [...h.entries()]),
-    keys: count(() => [...h.keys()]),
-    forEach: forEachCount,
-    ownKeys: Object.keys(h as object).length,
+    adapterIsInstanceOfHeaders: h instanceof G,
+    fromRecord: tryLen(() => new G({ cookie: "xxxxxxxxxx" })),
+    fromArray: tryLen(() => new G([["cookie", "xxxxxxxxxx"]])),
+    fromNativeHeaders: tryLen(() => new G(new G({ cookie: "xxxxxxxxxx" }))),
+    fromAdapter: tryLen(() => new G(h)),
   };
   // eslint-disable-next-line no-console
   console.error(`[WHY] ${JSON.stringify(why)}`);
