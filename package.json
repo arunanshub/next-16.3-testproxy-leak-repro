@@ -1,0 +1,21 @@
+{
+  "name": "next163-testproxy-leak-repro",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "test:leak": "bash scripts/run-leak.sh"
+  },
+  "dependencies": {
+    "next": "16.3.0-preview.10",
+    "react": "19.2.8",
+    "react-dom": "19.2.8"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.56.0",
+    "@types/node": "^22.0.0",
+    "@types/react": "19.2.18",
+    "typescript": "^5.9.0"
+  }
+}

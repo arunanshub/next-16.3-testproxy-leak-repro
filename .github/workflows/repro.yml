@@ -1,0 +1,24 @@
+name: leak-repro
+on: [push, workflow_dispatch]
+
+jobs:
+  leak:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        next: ["16.3.0-preview.9", "16.3.0-preview.10", "16.3.0"]
+    name: "next ${{ matrix.next }}"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22.x"
+          cache: pnpm
+      - run: pnpm install --no-frozen-lockfile
+      - run: pnpm add next@${{ matrix.next }}
+      - run: pnpm exec playwright install --with-deps chromium
+      # Watch the [rss] lines: flat on preview.9, unbounded on preview.10 / 16.3.0.
+      - run: pnpm test:leak
