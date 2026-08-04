@@ -2,14 +2,16 @@
 
 ## What happens
 
-Under the Next testmode harness (`experimental.testProxy` /
-`next/experimental/testmode/playwright`), `await headers()` returns a
-`ReadonlyHeaders` that breaks when copied. `.get()` and `.forEach()` on it work.
-But `new Headers(x)` returns an **empty** `Headers`. Every entry is lost,
-including `Cookie`.
+When `experimental.testProxy` is enabled, Next 16.3 makes `await headers()`
+return a `ReadonlyHeaders` that breaks when copied. `.get()` and `.forEach()` on
+it work. But `new Headers(x)` returns an **empty** `Headers`. Every entry is
+lost, including `Cookie`.
 
-Without testmode, the copy works. So this hits code paths that run under a
-testmode E2E suite.
+The `testProxy` config alone is enough. The Playwright testmode runtime
+(`next/experimental/testmode/playwright`) is **not** required — a plain
+Playwright run against a server with `testProxy` on reproduces it too. With
+`testProxy` off, the copy works. So a normal production build (no `testProxy`)
+is not affected.
 
 ## Why it matters
 
@@ -29,13 +31,15 @@ pnpm e2e:testmode   # bug: viaConstructor = 0
 pnpm e2e:plain      # no bug: viaConstructor = full length
 ```
 
-Cookie length by mode and version:
+Cookie length by mode and version (`new Headers()` of `0` = lost):
 
-| next | mode | direct | new Headers() | forEach |
-|---|---|---|---|---|
-| 16.3.0 | testmode | 414 | **0** | 414 |
-| 16.3.0 | plain | 414 | 414 | 414 |
-| 16.3.0-preview.9 | testmode | 414 | 414 | 414 |
+| next | plain (no testProxy) | testProxy on |
+|---|---|---|
+| 16.3.0 | 414 | **0** |
+| 16.3.0-preview.10 | 414 | **0** |
+| 16.3.0-preview.9 | 414 | 414 |
+
+"testProxy on" holds whether or not the Playwright testmode runtime is used.
 
 Minimal read, in a page or route that runs under testmode, with a `Cookie` on
 the request:

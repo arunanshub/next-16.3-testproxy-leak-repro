@@ -26,17 +26,18 @@ repro. Three cells isolate the trigger:
 | `proxyconfig` | on | plain Playwright | config on, runtime off |
 | `testmode` | on | testmode | the real app's E2E shape |
 
-Confirmed so far (cookie length; `new Headers()` of `0` = lost):
+Confirmed (cookie length; `new Headers()` of `0` = lost):
 
-| next | plain | testmode |
-|---|---|---|
-| 16.3.0 | 414 (green) | **0 (red)** |
-| 16.3.0-preview.10 | 414 (green) | **0 (red)** |
-| 16.3.0-preview.9 | 414 (green) | 414 (green) |
+| next | plain | proxyconfig | testmode |
+|---|---|---|---|
+| 16.3.0 | 414 (green) | **0 (red)** | **0 (red)** |
+| 16.3.0-preview.10 | 414 (green) | **0 (red)** | **0 (red)** |
+| 16.3.0-preview.9 | 414 (green) | 414 (green) | 414 (green) |
 
-So the bug is **testmode-only** and regressed **`preview.9` -> `preview.10`**.
-The `proxyconfig` cell shows whether the testProxy config alone is enough, or
-the testmode runtime is required — see the CI result.
+So the bug regressed **`preview.9` -> `preview.10`**, and the trigger is the
+**`experimental.testProxy` config itself** — the `proxyconfig` cell reproduces
+it with plain Playwright, so the testmode runtime is not required. Production
+never enables `testProxy`, so production is not affected.
 
 ## Run it
 

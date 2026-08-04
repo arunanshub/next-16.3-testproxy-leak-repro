@@ -6,9 +6,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "e2e:plain": "playwright test --config playwright.plain.config.ts",
-    "e2e:proxyconfig": "playwright test --config playwright.proxyconfig.config.ts",
-    "e2e:testmode": "playwright test --config playwright.testmode.config.ts"
+    "e2e:plain": "playwright test --config playwright.plain.config.ts --project=chromium",
+    "e2e:proxyconfig": "playwright test --config playwright.proxyconfig.config.ts --project=chromium",
+    "e2e:testmode": "playwright test --config playwright.testmode.config.ts --project=chromium"
   },
   "dependencies": {
     "next": "16.3.0",
