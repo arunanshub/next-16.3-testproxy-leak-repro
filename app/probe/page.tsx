@@ -21,36 +21,6 @@ export default async function Probe() {
     viaForEach: (manual.get("cookie") ?? "").length,
   };
 
-  // TEMPORARY probe: `new Headers(x)` does not use `.get()` or `.forEach()`. It
-  // copies via the iterator protocol (Symbol.iterator / entries), or, if there
-  // is no iterator, via own enumerable properties. These counts show which
-  // access path is empty and which still works.
-  const G = Headers;
-  const cookieLen = (x: Headers): number => (x.get("cookie") ?? "").length;
-  const tryLen = (fn: () => Headers): number | string => {
-    try {
-      return cookieLen(fn());
-    } catch (e) {
-      return `ERR:${(e as Error).message}`;
-    }
-  };
-  const anyH = h as unknown as { constructor?: { name?: string } };
-  const why = {
-    ctor: anyH.constructor?.name ?? typeof h,
-    adapterIsInstanceOfHeaders: h instanceof G,
-    fromRecord: tryLen(() => new G({ cookie: "xxxxxxxxxx" })),
-    fromArray: tryLen(() => new G([["cookie", "xxxxxxxxxx"]])),
-    fromNativeHeaders: tryLen(() => new G(new G({ cookie: "xxxxxxxxxx" }))),
-    fromAdapter: tryLen(() => new G(h)),
-  };
-  // eslint-disable-next-line no-console
-  console.error(`[WHY] ${JSON.stringify(why)}`);
-  try {
-    appendFileSync("/tmp/repro.log", `[WHY] ${JSON.stringify(why)}\n`);
-  } catch {
-    // Ignore a write error.
-  }
-
   const line = `[REPRO] ${JSON.stringify(result)}`;
   // eslint-disable-next-line no-console
   console.error(line);
