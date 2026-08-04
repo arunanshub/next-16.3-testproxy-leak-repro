@@ -1,8 +1,7 @@
 import type { NextConfig } from "next";
 
-// testProxy is enabled only in E2E mode, exactly like the real app: it is the
-// switch that routes server-side fetch() through the test proxy so
-// next/experimental/testmode can intercept it.
+// testProxy turns on only when NEXT_PUBLIC_E2E_MODE is set. This matches the
+// real app. testProxy routes server-side fetch through the test proxy.
 const nextConfig: NextConfig = {
   cacheComponents: true,
   partialPrefetching: true,

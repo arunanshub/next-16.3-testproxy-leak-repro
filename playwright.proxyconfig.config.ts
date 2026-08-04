@@ -1,8 +1,8 @@
 import { defineConfig, devices } from "@playwright/test";
 
-// Plain Playwright runtime, but the dev server has NEXT_PUBLIC_E2E_MODE=true so
-// testProxy is enabled in next.config. Isolates the testProxy config from the
-// testmode runtime.
+// Plain Playwright runtime. The dev server has NEXT_PUBLIC_E2E_MODE=true, so
+// testProxy is on. This separates the testProxy config from the test-mode
+// runtime.
 const PORT = process.env.PORT ?? "3002";
 const baseURL = `http://localhost:${PORT}`;
 

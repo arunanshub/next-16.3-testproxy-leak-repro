@@ -1,10 +1,9 @@
 import { readFileSync } from "node:fs";
 
-// Reads the [REPRO] lines that /probe wrote for every render pass and asserts
-// the correct behavior: `new Headers(headers())` must preserve the Cookie.
-// It throws (fails the test) when a pass that saw the cookie lost it in the
-// copy. So the test is GREEN on good versions and RED where the bug is — the
-// failing assertion is the repro.
+// This function reads the [REPRO] lines from /probe. It checks that the copy
+// keeps the cookie. It throws an error when a pass that saw the cookie lost it
+// in the copy. The test then fails. The test passes on a good version. The test
+// fails on a version with the bug.
 export function assertCookiePreserved(logPath = "/tmp/repro.log"): void {
   const raw = readFileSync(logPath, "utf8").trim();
   const passes = raw
@@ -24,9 +23,7 @@ export function assertCookiePreserved(logPath = "/tmp/repro.log"): void {
   for (const p of sawCookie) {
     if (p.viaConstructor !== p.direct) {
       throw new Error(
-        `BUG: new Headers(await headers()) dropped the cookie — ${JSON.stringify(
-          p,
-        )}`,
+        `new Headers(await headers()) lost the cookie: ${JSON.stringify(p)}`,
       );
     }
   }

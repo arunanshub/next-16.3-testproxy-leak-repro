@@ -1,9 +1,9 @@
 name: repro
 on: [push, workflow_dispatch]
 
-# TDD-style: each cell ASSERTS the correct behavior (the copy must keep the
-# cookie), so a cell goes RED exactly where the bug is. Expect green on
-# preview.9 everywhere, and red on preview.10 / 16.3.0 in the testmode cell.
+# Each cell checks that the copy keeps the cookie. A cell fails where the bug is.
+# preview.9 passes. preview.10 and 16.3.0 fail in the proxyconfig and testmode
+# cells.
 jobs:
   repro:
     runs-on: ubuntu-latest
@@ -25,7 +25,7 @@ jobs:
       - run: pnpm add next@${{ matrix.next }}
       - run: pnpm exec playwright install --with-deps chromium
 
-      # No testProxy, no testmode runtime — the production shape. Expected GREEN.
+      # testProxy is off. No test-mode runtime. This is the production shape.
       - name: "plain (production shape)"
         if: always()
         env:
@@ -37,7 +37,7 @@ jobs:
           cat /tmp/repro.log 2>/dev/null || echo "(no [REPRO] lines)"
           exit $rc
 
-      # testProxy config ON, but plain runtime. Isolates config from runtime.
+      # testProxy is on. Plain runtime. This separates the config from the runtime.
       - name: "testProxy config, plain runtime"
         if: always()
         env:
@@ -49,7 +49,7 @@ jobs:
           cat /tmp/repro.log 2>/dev/null || echo "(no [REPRO] lines)"
           exit $rc
 
-      # Full testmode harness, like the real app. Expected RED on preview.10+.
+      # The full test-mode harness. This test fails on preview.10 and later.
       - name: "testmode (real app shape)"
         if: always()
         env:

@@ -1,8 +1,6 @@
 import Link from "next/link";
 
-// Home page. The prefetching Link makes Next prerender /probe's App Shell in a
-// prefetch pass (this is the pass we suspect mangles the headers object). The
-// test then clicks through to /probe for the runtime render.
+// The home page. The Link prefetches /probe. The test then opens /probe.
 export default function Home() {
   return (
     <main>

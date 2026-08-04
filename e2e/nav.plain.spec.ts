@@ -1,8 +1,8 @@
 import { test } from "@playwright/test";
 import { assertCookiePreserved } from "./_assert";
 
-// Plain: no testProxy config, no testmode runtime. This is the production shape.
-// Expected: GREEN on all versions (the copy works).
+// Plain run. testProxy is off. This is the production shape. This test passes on
+// all versions.
 test("new Headers(headers()) preserves the cookie (plain)", async ({
   page,
   context,

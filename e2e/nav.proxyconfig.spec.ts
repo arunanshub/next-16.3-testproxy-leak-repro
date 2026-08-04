@@ -1,10 +1,9 @@
 import { test } from "@playwright/test";
 import { assertCookiePreserved } from "./_assert";
 
-// Proxy-config: testProxy is ON in next.config (NEXT_PUBLIC_E2E_MODE=true), but
-// the test runs under PLAIN Playwright — not the testmode runtime. This isolates
-// whether the testProxy *config* alone breaks the copy, or whether the testmode
-// *runtime* (next/experimental/testmode/playwright) is required.
+// testProxy is on (NEXT_PUBLIC_E2E_MODE=true). The test runs under plain
+// Playwright, not the test-mode runtime. This shows whether the testProxy config
+// alone causes the bug, or whether the test-mode runtime is necessary.
 test("new Headers(headers()) preserves the cookie (testProxy config, plain runtime)", async ({
   page,
   context,
