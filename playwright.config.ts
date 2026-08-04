@@ -9,7 +9,14 @@ export default defineConfig({
   retries: 0,
   workers: 1,
   reporter: "list",
-  use: { baseURL, ...devices["Desktop Chrome"] },
+  use: { baseURL },
+  projects: [
+    {
+      name: "chromium",
+      testMatch: "**/*.spec.ts",
+      use: { ...devices["Desktop Chrome"] },
+    },
+  ],
   webServer: {
     command: "next dev",
     url: baseURL,
