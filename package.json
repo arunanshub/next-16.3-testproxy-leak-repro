@@ -1,6 +1,7 @@
 {
   "name": "next163-testproxy-leak-repro",
   "private": true,
+  "packageManager": "pnpm@9.15.0",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
