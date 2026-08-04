@@ -13,7 +13,7 @@ export default defineConfig({
   use: { baseURL },
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
   webServer: {
-    command: "next dev",
+    command: `next dev -p ${PORT}`,
     url: baseURL,
     reuseExistingServer: false,
     stdout: "pipe",

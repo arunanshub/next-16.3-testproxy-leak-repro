@@ -22,20 +22,27 @@ jobs:
       - run: pnpm add next@${{ matrix.next }}
       - run: pnpm exec playwright install --with-deps chromium
 
-      # Baseline: a plain curl request, no browser, no testmode. Prints the
-      # cookie length read three ways. Expected: all equal (no bug at runtime).
-      - name: Baseline curl (plain)
-        continue-on-error: true
-        run: bash scripts/check.sh plain
-
-      # Browser navigation WITHOUT the testmode harness. The server prints
-      # [REPRO] lines for every render pass of /probe (prefetch prerender +
-      # runtime). A viaConstructor of 0 while direct is non-zero is the bug.
+      # Browser navigation WITHOUT the testmode harness. /probe writes a [REPRO]
+      # line for every render pass (prefetch prerender + runtime). A
+      # viaConstructor of 0 while direct is non-zero is the bug. If it appears
+      # here, the trigger is the render model (prod runs it too), not testmode.
       - name: Browser nav (plain, no testmode)
         continue-on-error: true
-        run: pnpm e2e:plain
+        env:
+          PORT: "3000"
+        run: |
+          rm -f /tmp/repro.log
+          pnpm e2e:plain || true
+          echo "===== [REPRO] plain (next ${{ matrix.next }}) ====="
+          cat /tmp/repro.log || echo "(no [REPRO] lines — /probe did not render)"
 
       # Browser navigation WITH the testmode harness, like the real app.
       - name: Browser nav (testmode)
         continue-on-error: true
-        run: pnpm e2e:testmode
+        env:
+          PORT: "3001"
+        run: |
+          rm -f /tmp/repro.log
+          pnpm e2e:testmode || true
+          echo "===== [REPRO] testmode (next ${{ matrix.next }}) ====="
+          cat /tmp/repro.log || echo "(no [REPRO] lines — /probe did not render)"
