@@ -7,9 +7,9 @@
 export const instant = false;
 
 export default async function Page() {
-  // Fetch a *separate* backend origin (:4000), like the real app hitting its
-  // control-tower backend — not the Next server fetching itself.
-  const res = await fetch("http://localhost:4000/stream", {
+  // Fetch a real external host over the network (streamed response), like the
+  // real app hitting its control-tower backend through the test proxy loopback.
+  const res = await fetch("https://httpbin.org/stream/500", {
     cache: "no-store",
   });
   const text = await res.text();

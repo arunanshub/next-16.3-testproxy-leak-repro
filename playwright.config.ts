@@ -17,18 +17,11 @@ export default defineConfig({
       use: { ...devices["Desktop Chrome"] },
     },
   ],
-  webServer: [
-    {
-      command: "node server/stream-server.mjs",
-      url: "http://localhost:4000/health",
-      reuseExistingServer: false,
-    },
-    {
-      command: "next dev",
-      url: baseURL,
-      reuseExistingServer: false,
-      // testProxy activates only when this is set (see next.config.ts).
-      env: { NEXT_PUBLIC_E2E_MODE: "true" },
-    },
-  ],
+  webServer: {
+    command: "next dev",
+    url: baseURL,
+    reuseExistingServer: false,
+    // testProxy activates only when this is set (see next.config.ts).
+    env: { NEXT_PUBLIC_E2E_MODE: "true" },
+  },
 });
